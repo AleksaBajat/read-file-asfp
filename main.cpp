@@ -7,7 +7,7 @@
 #include <string>
 
 struct Record {
-    double min = std::numeric_limits<double>::max(), max = std::numeric_limits<double>::min();
+    double min = std::numeric_limits<double>::max(), max = std::numeric_limits<double>::lowest();
     double sum = 0;
     int count = 0;
 };
