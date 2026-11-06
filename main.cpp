@@ -1,16 +1,34 @@
-#include <charconv>
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <memory>
 #include <string>
 
 struct Record {
-    double min = std::numeric_limits<double>::max(), max = std::numeric_limits<double>::lowest();
-    double sum = 0;
-    int count = 0;
+    int16_t min = std::numeric_limits<int16_t>::max(), max = std::numeric_limits<int16_t>::lowest();
+    int32_t count = 0;
+    int64_t sum = 0;
 };
+
+void extract_temperature(std::string::iterator end, int32_t& num){
+    num = 0;
+    int32_t exp = 1;
+
+    while (*--end != ';') {
+        if(*end == '.'){
+            continue;
+        }
+
+        if(*end == '-'){
+            num *= -1;
+            continue;
+        }
+
+        int32_t n = (*end - '0') * exp;
+        exp *= 10;
+        num += n;
+    }
+}
 
 int main(){
     auto start = std::chrono::high_resolution_clock::now();
@@ -19,11 +37,10 @@ int main(){
 
     Record result = Record();
 
-    double num;
+    int32_t num;
 
     while(std::getline(file, line)){
-        size_t idx = line.find(';');
-        std::from_chars(std::to_address(line.begin() + idx + 1), std::to_address(line.end()), num);
+        extract_temperature(line.end(), num);
 
         if(num > result.max){
             result.max = num;
@@ -40,9 +57,9 @@ int main(){
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
     std::cout << "elapsed: " << elapsed.count() << " ms\n";
-    std::cout << "min: " << result.min << std::endl;
-    std::cout << "max: " << result.max << std::endl;
-    std::cout << "avg: " << result.sum / result.count << std::endl;
+    std::cout << "min: " << result.min / 10.0 << std::endl;
+    std::cout << "max: " << result.max / 10.0 << std::endl;
+    std::cout << "avg: " << result.sum / 10.0 / result.count << std::endl;
 
     return 0;
 }
