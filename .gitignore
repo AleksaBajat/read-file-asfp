@@ -1,3 +1,4 @@
 perf.data
 *.out
 gas_stations
+gas_stations.csv
