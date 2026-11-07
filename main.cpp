@@ -29,9 +29,6 @@ int main(int argc, char* argv[]){
             ? argv[1]
             : "gas_stations.csv";
 
-    std::unordered_map<std::string, Record, StringHash, std::equal_to<>> map = std::unordered_map<std::string, Record, StringHash, std::equal_to<>>();
-    map.reserve(10'000);
-    std::string line;
 
     std::ifstream file("gas_stations.csv");
 
@@ -39,6 +36,10 @@ int main(int argc, char* argv[]){
         throw std::runtime_error("unable to open the input file");
     }
 
+    std::unordered_map<std::string, Record, StringHash, std::equal_to<>> map = std::unordered_map<std::string, Record, StringHash, std::equal_to<>>();
+    map.reserve(10'000);
+
+    std::string line;
     double num;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -67,9 +68,6 @@ int main(int argc, char* argv[]){
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
     std::cout << "elapsed: " << elapsed.count() << " ms\n";
-    // std::cout << "min: " << result.min << std::endl;
-    // std::cout << "max: " << result.max << std::endl;
-    // std::cout << "avg: " << result.sum / result.count << std::endl;
 
     return 0;
 }
