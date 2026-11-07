@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -23,11 +24,20 @@ struct StringHash {
     }
 };
 
-int main(){
+int main(int argc, char* argv[]){
+    const std::string input_path = argc > 1
+            ? argv[1]
+            : "gas_stations.csv";
+
     std::unordered_map<std::string, Record, StringHash, std::equal_to<>> map = std::unordered_map<std::string, Record, StringHash, std::equal_to<>>();
     map.reserve(10'000);
     std::string line;
+
     std::ifstream file("gas_stations.csv");
+
+    if(!file.is_open()){
+        throw std::runtime_error("unable to open the input file");
+    }
 
     double num;
 
