@@ -14,3 +14,7 @@ run: ## run the binary
 .PHONY:
 perf-gen: ## generate perf report
 	taskset -c 2 perf record -g --call-graph fp ./gas_stations
+
+.PHONY:
+verify: compile ## compare C++ output with Python reference
+	./gas_stations gas_stations.csv | python3 verify.py gas_stations.csv
