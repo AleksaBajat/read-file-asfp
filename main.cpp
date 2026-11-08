@@ -8,11 +8,75 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 struct Record {
     int16_t min, max;
     int32_t count = 0;
     int64_t sum = 0;
+};
+
+class MappedFile {
+    private:
+        int fd = -1;
+        void *data = MAP_FAILED;
+        size_t size = 0;
+
+    public:
+    MappedFile(const char* file_name){
+        fd = open(file_name, O_RDONLY);
+
+        if (fd == -1){
+            throw std::runtime_error("unable to open the file");
+        }
+
+        struct stat sb;
+        if (fstat(fd, &sb) == -1){
+            close(fd);
+            throw std::runtime_error("unable to get file size");
+        }
+
+        size = sb.st_size;
+
+        if(size == 0){
+            return;
+        }
+
+        data = mmap(nullptr, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+
+        if(data == MAP_FAILED){
+            close(fd);
+            throw std::runtime_error("mmap failed");
+        }
+    }
+
+    ~MappedFile(){
+        if(data != MAP_FAILED){
+            munmap(data, size);
+        }
+
+        if(fd != -1){
+            close(fd);
+        }
+    }
+
+    MappedFile(const MappedFile&) = delete;
+    MappedFile& operator=(const MappedFile&) = delete;
+
+    MappedFile(MappedFile&& other) noexcept
+         : fd(other.fd), data(other.data), size(other.size) {
+         other.fd = -1;
+         other.data = MAP_FAILED;
+         other.size = 0;
+    }
+
+     std::string_view view() const noexcept {
+         if (data == MAP_FAILED || size == 0) return {};
+         return {static_cast<const char*>(data), size};
+     }
 };
 
 struct StringHash {
@@ -23,11 +87,13 @@ struct StringHash {
     }
 };
 
-void extract_temp(std::string::iterator end, int16_t& num){
+void extract_temp(std::string_view temp, int16_t& num){
     num = 0;
     int16_t mul = 1;
+    auto end = temp.end();
 
-    while(*--end != ';'){
+    while(end != temp.begin()){
+        --end;
         if(*end == '.'){
             continue;
         }
@@ -57,25 +123,37 @@ int main(int argc, char* argv[]){
             ? argv[1]
             : "gas_stations.csv";
 
-
-    std::ifstream file(input_path);
-
-    if(!file.is_open()){
-        throw std::runtime_error("unable to open the input file");
-    }
-
     std::unordered_map<std::string, Record, StringHash, std::equal_to<>> map = std::unordered_map<std::string, Record, StringHash, std::equal_to<>>();
     map.reserve(10'000);
-
-    std::string line;
     int16_t num;
 
-    auto start = std::chrono::high_resolution_clock::now();
-    while(std::getline(file, line)){
-        size_t semi_idx = line.find(';');
+    MappedFile file = MappedFile(input_path.c_str());
+    auto view = file.view();
+    auto it_view = view.begin();
 
-        std::string_view name(line.data(), semi_idx);
-        extract_temp(line.end(), num);
+    auto start = std::chrono::high_resolution_clock::now();
+    while(it_view != view.end()){
+        std::string_view name;
+        std::string_view temp;
+
+        auto left = it_view;
+
+        while(*it_view != ';'){
+            it_view++;
+        }
+
+        name = std::string_view{left, it_view};
+        it_view++;
+        left = it_view;
+
+        while(*it_view != '\n'){
+            it_view++;
+        }
+
+        temp = std::string_view{left, it_view};
+        it_view++;
+
+        extract_temp(temp, num);
 
         if(auto entry = map.find(name); entry != map.end()){
             if(num > entry->second.max){
@@ -92,6 +170,7 @@ int main(int argc, char* argv[]){
             map.emplace(std::string(name), Record{num, num, 1, num});
         }
     }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
