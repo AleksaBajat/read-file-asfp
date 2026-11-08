@@ -13,6 +13,7 @@ run: ## run the binary
 
 .PHONY:
 perf-gen: ## generate perf report
+	rm -f perf.data
 	taskset -c 2 perf record -g --call-graph fp ./gas_stations
 
 .PHONY:
