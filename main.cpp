@@ -66,47 +66,51 @@ void print_record(std::ostream &out, std::string_view name, const Record &r) {
       << " | sum: " << r.sum / 10.0 << " | count: " << r.count << '\n';
 }
 
+StationMap aggregate(std::string_view data){
+    StationMap map;
+    map.reserve(10'000);
+    auto it_view = data.begin();
+
+    while (it_view != data.end()) {
+      std::string_view name;
+      std::string_view temp;
+
+      auto left = it_view;
+
+      while (*it_view != ';') {
+        it_view++;
+      }
+
+      name = std::string_view{left, it_view};
+      it_view++;
+      left = it_view;
+
+      while (*it_view != '\n') {
+        it_view++;
+      }
+
+      temp = std::string_view{left, it_view};
+      it_view++;
+
+      int16_t temp_val = extract_temp(temp);
+
+      if (auto entry = map.find(name); entry != map.end()) {
+        entry->second.add(temp_val);
+      } else {
+        map.emplace(std::string(name), Record{temp_val});
+      }
+    }
+
+    return map;
+}
+
 int main(int argc, char *argv[]) {
   const std::string input_path = argc > 1 ? argv[1] : "gas_stations.csv";
 
-  StationMap map;
-  map.reserve(10'000);
 
   MappedFile file(input_path.c_str());
-  auto view = file.view();
-  auto it_view = view.begin();
-
   auto start = std::chrono::steady_clock::now();
-  while (it_view != view.end()) {
-    std::string_view name;
-    std::string_view temp;
-
-    auto left = it_view;
-
-    while (*it_view != ';') {
-      it_view++;
-    }
-
-    name = std::string_view{left, it_view};
-    it_view++;
-    left = it_view;
-
-    while (*it_view != '\n') {
-      it_view++;
-    }
-
-    temp = std::string_view{left, it_view};
-    it_view++;
-
-    int16_t temp_val = extract_temp(temp);
-
-    if (auto entry = map.find(name); entry != map.end()) {
-      entry->second.add(temp_val);
-    } else {
-      map.emplace(std::string(name), Record{temp_val});
-    }
-  }
-
+  auto map = aggregate(file.view());
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed = end - start;
 
