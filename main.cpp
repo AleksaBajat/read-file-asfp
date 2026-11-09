@@ -9,23 +9,9 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <unordered_map>
+#include "custom_map.hpp"
 #include "mapped_file.hpp"
 
-struct Record {
-  int16_t min, max;
-  int32_t count = 0;
-  int64_t sum = 0;
-
-  explicit Record(int16_t v) : min(v), max(v), count(1), sum(v) {}
-
-  void add(int16_t v) {
-    min = std::min(min, v);
-    max = std::max(max, v);
-    sum += v;
-    ++count;
-  }
-};
 
 struct StringHash {
   using is_transparent = void;
@@ -34,8 +20,6 @@ struct StringHash {
     return std::hash<std::string_view>{}(sv);
   }
 };
-using StationMap =
-    std::unordered_map<std::string, Record, StringHash, std::equal_to<>>;
 
 int16_t extract_temp(std::string_view temp) {
   int16_t num = 0;
@@ -66,18 +50,20 @@ void print_record(std::ostream &out, std::string_view name, const Record &r) {
       << " | sum: " << r.sum / 10.0 << " | count: " << r.count << '\n';
 }
 
-StationMap aggregate(std::string_view data){
-    StationMap map;
-    map.reserve(10'000);
+CustomMap aggregate(std::string_view data){
+    CustomMap map;
     auto it_view = data.begin();
 
     while (it_view != data.end()) {
       std::string_view name;
       std::string_view temp;
+      std::uint64_t hash = 0xcbf29ce484222325u;
 
       auto left = it_view;
 
       while (*it_view != ';') {
+        hash ^= static_cast<unsigned char>(*it_view);
+        hash *= 0x100000001b3u;
         it_view++;
       }
 
@@ -94,11 +80,7 @@ StationMap aggregate(std::string_view data){
 
       int16_t temp_val = extract_temp(temp);
 
-      if (auto entry = map.find(name); entry != map.end()) {
-        entry->second.add(temp_val);
-      } else {
-        map.emplace(std::string(name), Record{temp_val});
-      }
+      map.insert(name, hash, temp_val);
     }
 
     return map;
