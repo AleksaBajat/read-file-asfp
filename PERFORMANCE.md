@@ -14,7 +14,7 @@ taskset -c 0 ./gas_stations # Intel(R) Core(TM) Ultra 7 270K Plus has P and E co
 Measured using the high resolution clock:
 
 ```text
-elapsed: 131.704 ms
+elapsed: 103.247 ms
 ```
 
 Perf tool report:

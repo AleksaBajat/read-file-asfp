@@ -46,7 +46,7 @@ class CustomMap {
         void insert(std::string_view key, uint64_t hash, int16_t val){
             uint64_t s = slot(hash);
 
-            while(!entries[s].key.empty() && !(entries[s].hash == hash && entries[s].key == key)){
+            while(!entries[s].key.empty() && entries[s].hash != hash){
                 s = (s + 1) & mask;
             }
 
